@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -5,6 +7,12 @@ const prisma = new PrismaClient();
 
 async function hash(password: string) {
   return bcrypt.hash(password, 10);
+}
+
+const FINANCE_DIR = path.join(__dirname, "seed-data", "finance");
+
+function readFinanceDoc(file: string) {
+  return fs.readFileSync(path.join(FINANCE_DIR, file), "utf-8");
 }
 
 async function main() {
@@ -444,6 +452,173 @@ async function main() {
           q(
             "Nguyên tắc giao việc SMART nhấn mạnh điều gì?",
             ["Mục tiêu rõ ràng, có thời hạn", "Giao càng nhiều việc càng tốt", "Không cần đo lường kết quả", "Chỉ giao việc bằng miệng"],
+            [0],
+          ),
+        ],
+      },
+    },
+  });
+
+  // Quy chế quản trị tài chính thật của công ty (Khối Tài chính)
+  const financeDocs = [
+    {
+      file: "QCTC00.md",
+      title: "QC-TC-00: Quy chế Khung Quản trị Tài chính",
+      level: "MANAGER" as const,
+      tags: "tài chính, quản trị tài chính, quy chế khung, HĐQT",
+      summary:
+        "Khung nguyên tắc gốc, hiệu lực cao nhất trong hệ thống văn bản quản trị tài chính: kiến trúc 4 trụ cột (Phân bổ vốn, Vận hành, Kiểm soát tuân thủ, Đo lường hiệu quả), phân tầng văn bản Quy chế/Quy định/Quy trình, thứ bậc hiệu lực, thẩm quyền ban hành và chu kỳ rà soát.",
+    },
+    {
+      file: "QCTC01.md",
+      title: "QC-TC-01: Quy chế Đầu tư & Phát triển Danh mục (Trụ cột A)",
+      level: "MANAGER" as const,
+      tags: "tài chính, đầu tư, danh mục tòa nhà, lease-in, thẩm định dự án",
+      summary:
+        "Nguyên tắc quyết định đầu tư mới, mở rộng/thu hẹp danh mục tòa nhà, điều kiện thẩm định, kỳ hạn và điều khoản thoát hợp đồng lease-in, thẩm quyền phê duyệt và nguyên tắc thoái vốn tài sản kém hiệu quả.",
+    },
+    {
+      file: "QCTC02.md",
+      title: "QC-TC-02: Quy chế Quản lý Tài chính & Chi tiêu (Trụ cột B)",
+      level: "STAFF" as const,
+      tags: "tài chính, chi tiêu, ngân sách, tiền cọc, hợp đồng cho thuê",
+      summary:
+        "Nguyên tắc quản lý dòng tiền, thẩm quyền chi tiêu, thu và hoàn tiền cọc, thẩm quyền ký kết hợp đồng cho thuê (lease-out), và nguyên tắc lập, kiểm soát ngân sách hằng năm.",
+    },
+    {
+      file: "QCTC03.md",
+      title: "QC-TC-03: Quy chế Kiểm soát Nội bộ (Trụ cột C)",
+      level: "SENIOR" as const,
+      tags: "tài chính, kiểm soát nội bộ, bất kiêm nhiệm, đối chiếu hợp đồng",
+      summary:
+        "Nguyên tắc phân quyền và bất kiêm nhiệm (segregation of duties), đối chiếu định kỳ hợp đồng lease-in/lease-out, kiểm soát dòng tiền chứng từ, phân loại và xử lý sai lệch/ngoại lệ.",
+    },
+    {
+      file: "QCTC04.md",
+      title: "QC-TC-04: Quy chế Báo cáo & Đánh giá Hiệu quả Tài chính (Trụ cột D)",
+      level: "SENIOR" as const,
+      tags: "tài chính, KPI, báo cáo hiệu quả, tái đánh giá",
+      summary:
+        "Nguyên tắc đo lường hiệu quả sử dụng vốn theo bộ chỉ số cốt lõi, chu kỳ báo cáo, cơ chế tự động kích hoạt tái đánh giá khi tài sản vượt ngưỡng cảnh báo, và vòng phản hồi điều chỉnh tiêu chí đầu tư.",
+    },
+  ];
+
+  const financeDocIds: string[] = [];
+  for (const d of financeDocs) {
+    const doc = await prisma.document.create({
+      data: {
+        title: d.title,
+        category: "QUY_CHE",
+        level: d.level,
+        tags: d.tags,
+        summary: d.summary,
+        content: readFinanceDoc(d.file),
+        version: "1.0",
+        createdById: admin.id,
+      },
+    });
+    financeDocIds.push(doc.id);
+  }
+
+  const programFinance = await prisma.trainingProgram.create({
+    data: {
+      title: "Đào tạo Quản trị Tài chính (Khối Tài chính)",
+      description:
+        "Lộ trình đọc hiểu hệ thống quy chế quản trị tài chính: khung nguyên tắc gốc và 4 trụ cột (Phân bổ vốn, Vận hành, Kiểm soát tuân thủ, Đo lường hiệu quả).",
+      level: "SENIOR",
+      status: "PUBLISHED",
+      createdById: admin.id,
+      items: {
+        create: financeDocIds.map((documentId, i) => ({ documentId, order: i })),
+      },
+    },
+  });
+
+  await prisma.quiz.create({
+    data: {
+      title: "Đánh giá kiến thức Quản trị Tài chính",
+      description:
+        "Kiểm tra hiểu biết về Quy chế Khung và 4 trụ cột quản trị tài chính (QC-TC-00 đến QC-TC-04).",
+      level: "SENIOR",
+      passScore: 75,
+      programId: programFinance.id,
+      createdById: admin.id,
+      questions: {
+        create: [
+          q(
+            "Quy chế Khung Quản trị Tài chính (QC-TC-00) có hiệu lực như thế nào so với các Quy chế trụ cột (QC-TC-01 đến 04)?",
+            [
+              "Hiệu lực cao nhất trong toàn bộ hệ thống, kể cả với các Quy chế trụ cột",
+              "Hiệu lực ngang bằng và có thể bị các Quy chế trụ cột thay thế",
+              "Chỉ áp dụng khi các Quy chế trụ cột không quy định",
+              "Không có hiệu lực bắt buộc, chỉ mang tính tham khảo",
+            ],
+            [0],
+          ),
+          q(
+            "Bốn trụ cột quản trị tài chính theo QC-TC-00 gồm những gì?",
+            [
+              "Phân bổ vốn, Vận hành, Kiểm soát tuân thủ, Đo lường hiệu quả",
+              "Đầu tư, Nhân sự, Marketing, Sản phẩm",
+              "Ngân sách, Kế toán, Thuế, Kiểm toán",
+              "Doanh thu, Chi phí, Lợi nhuận, Dòng tiền",
+            ],
+            [0],
+          ),
+          q(
+            "Quy chế Khung (QC-TC-00) được rà soát định kỳ tối thiểu bao lâu một lần?",
+            ["6 tháng", "12 tháng", "24 tháng", "36 tháng"],
+            [2],
+          ),
+          q(
+            "Việc sửa đổi, bổ sung Quy chế Khung (QC-TC-00) thuộc thẩm quyền của ai?",
+            [
+              "Chỉ riêng Hội đồng Quản trị, không được ủy quyền",
+              "Tổng Giám đốc, có thể ủy quyền cho CFO",
+              "CFO/Khối Tài chính",
+              "Trưởng bộ phận liên quan",
+            ],
+            [0],
+          ),
+          q(
+            "Theo QC-TC-03, nguyên tắc bất kiêm nhiệm (Segregation of Duties) yêu cầu điều gì?",
+            [
+              "Người đề xuất, người phê duyệt và người thực hiện thanh toán phải là ba cá nhân khác nhau",
+              "Chỉ cần người phê duyệt khác người thực hiện",
+              "Một người có thể vừa đề xuất vừa phê duyệt nếu giá trị nhỏ",
+              "Không bắt buộc tách vai trò nếu là giao dịch nội bộ",
+            ],
+            [0],
+          ),
+          q(
+            "Đâu là các rủi ro lõi được nhắc đến trong hệ thống quy chế tài chính này? (chọn tất cả đáp án đúng)",
+            [
+              "Chênh lệch giá (price spread) bất lợi",
+              "Lệch kỳ hạn (tenor mismatch) giữa lease-in và lease-out",
+              "Tỷ lệ lấp đầy dưới điểm hòa vốn",
+              "Thiếu nhân sự phòng Marketing",
+            ],
+            [0, 1, 2],
+            "MULTI_CHOICE",
+          ),
+          q(
+            "Theo QC-TC-04, khi nào một tài sản tự động được đưa vào diện xem xét tái đánh giá?",
+            [
+              "Khi chỉ số vượt ngưỡng cảnh báo trong hai kỳ báo cáo liên tiếp",
+              "Khi có bất kỳ cá nhân nào phát hiện và báo cáo thủ công",
+              "Chỉ khi Hội đồng Quản trị yêu cầu",
+              "Sau mỗi 5 năm khai thác bất kể hiệu quả",
+            ],
+            [0],
+          ),
+          q(
+            "Vòng phản hồi D→A trong hệ thống quy chế này nghĩa là gì?",
+            [
+              "Kết quả đo lường hiệu quả (Trụ cột D) được dùng làm căn cứ điều chỉnh tiêu chí phân bổ vốn (Trụ cột A)",
+              "Trụ cột A quyết định luôn kết quả của Trụ cột D",
+              "Hai trụ cột hoạt động hoàn toàn độc lập, không liên kết",
+              "Chỉ áp dụng một lần khi mới ban hành quy chế",
+            ],
             [0],
           ),
         ],

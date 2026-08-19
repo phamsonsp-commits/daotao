@@ -68,6 +68,14 @@ khoản demo) trước khi đưa vào sử dụng thật.
 - `Quiz` + `Question` + `QuizAttempt`: bài đánh giá, câu hỏi trắc nghiệm và
   lịch sử làm bài.
 
+## Dữ liệu quy chế tài chính thật
+
+`prisma/seed-data/finance/` chứa nội dung 5 quy chế quản trị tài chính thật
+(QC-TC-00 đến QC-TC-04) do người dùng cung cấp. `npm run db:seed` sẽ nạp các
+tài liệu này, tạo chương trình đào tạo "Đào tạo Quản trị Tài chính (Khối Tài
+chính)" và một bài đánh giá gắn kèm. Nội dung này thuộc về công ty — cân nhắc
+kỹ trước khi đổi quyền riêng tư của repository.
+
 ## Lệnh hữu ích
 
 ```bash
